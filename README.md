@@ -6,7 +6,7 @@ This algorithm uses the Discrete Cosine Transform, mainly due to the fact that i
 
 ## Preparation
 
-This simplification of the algorithm asumes the image dimensions are divisibles by 16. Therefore, the folowing function fills the image's margins with black to ensure that both dimensions are divisible by 16.
+This simplification of the algorithm asumes the image dimensions are divisibles by 16. Therefore, the the algorithm has to firstly fill the image's margins with black to ensure that both dimensions are divisible by 16.
 
 ## Using the right format
 
