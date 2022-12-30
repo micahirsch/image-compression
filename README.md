@@ -20,13 +20,13 @@ The following step consists in thinking of each matrix as a group of `8×8` subm
 
 Similarly to the previous step, the inverse process is also implemented, since it will be used later to retrieve the compressed image.
 
-#### Quantization
+## Quantization
 
 This is the most important compression step, in which we discard the highest frequencies in each `8×8` submatrix using a quantization matrix. This matrix can take different numbers and it's values change how the image is compressed. The quantization process consists in taking each submatrix and dividing it number to number by the quantization matrix rounding the result.
 
 The result will have many 0s specially on the last rows and columns, which will help the compression later on.
 
-#### Compression 
+## Compression 
 
 Finally, we discard the zeros from the transformed submatrices. That is done by the following procedure:
 
@@ -34,5 +34,8 @@ Finally, we discard the zeros from the transformed submatrices. That is done by 
 
 2. The resulting vector is compressed using the _Run Length Encoding_ method, which consists of indicating in a tuple the number of consecutive appearances of a number and the number itself. 
 
-All of the vectors produced are joined into a single vector.
+The vectors produced are all joined into a single vector.
 
+## Joining the previous steps
+
+The final algorithm is excecuted using the previously explained procedures and tested using different images and two different quantization matrices. 
