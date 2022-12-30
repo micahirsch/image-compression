@@ -41,6 +41,6 @@ The vectors produced are all joined into a single vector.
 The final algorithm is excecuted using the previously explained procedures and tested using different images and two different quantization matrices. The first quantization matrix is the most used matrix, meanwhile the second one was created by myself. 
 
 The compression of an image using both matrices:
-![image](https://user-images.githubusercontent.com/83768210/210096327-83c7dc47-c167-4800-8c96-769a7dcbe8a2.png) ![image](https://user-images.githubusercontent.com/83768210/210096377-08e04fd7-2a06-4fd6-91af-1910ea467920.png)
+![image](https://user-images.githubusercontent.com/83768210/210096327-83c7dc47-c167-4800-8c96-769a7dcbe8a2.png) | ![image](https://user-images.githubusercontent.com/83768210/210096377-08e04fd7-2a06-4fd6-91af-1910ea467920.png)
 
 Depending on which quantization matrix is used the image can preserve more or less quality.
