@@ -38,4 +38,4 @@ The vectors produced are all joined into a single vector.
 
 ## Joining the previous steps
 
-The final algorithm is excecuted using the previously explained procedures and tested using different images and two different quantization matrices. 
+The final algorithm is excecuted using the previously explained procedures and tested using different images and two different quantization matrices. The first quantization matrix is the most used matrix, meanwhile the second one was created by myself. Depending on which quantization matrix is used the image looses more or less quality.
