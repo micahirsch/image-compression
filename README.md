@@ -42,8 +42,8 @@ The final algorithm is excecuted using the previously explained procedures and t
 
 The compression of an image using both matrices:
 <p float="left", align= "middle">
-  <img src="https://user-images.githubusercontent.com/83768210/210096327-83c7dc47-c167-4800-8c96-769a7dcbe8a2.png" width="400" />
-  <img src="https://user-images.githubusercontent.com/83768210/210096377-08e04fd7-2a06-4fd6-91af-1910ea467920.png" width="400" /> 
+  <img src="https://user-images.githubusercontent.com/83768210/210096327-83c7dc47-c167-4800-8c96-769a7dcbe8a2.png" width="500" />
+  <img src="https://user-images.githubusercontent.com/83768210/210096377-08e04fd7-2a06-4fd6-91af-1910ea467920.png" width="500" /> 
 </p>
 
 Depending on which quantization matrix is used the image can preserve more or less quality.
