@@ -12,12 +12,6 @@ md"""
 ## Image Compression
 """
 
-# ╔═╡ d3e6033c-a374-4892-8216-bf9eab53d0d8
-md"""
-The idea behind this project is to implement a barely simplified version of the image codification algorithm for `.jpg` archives, which is based on an essential property of the Fourier Transform: transforming signals from real life usually leads to low frequencies with little contribution from high frequencies. This notion introduces the following idea: given a signal we can consider it's Fourier Transform and discard higher frequencies. This allows us to store only a small number of frequencies, the compressed signal. To retrieve the signal you can complete the transformed vector with zeros and do the inverse transform.
-
-This algorithm also uses an important trick: it uses the Discrete Cosine Transform due to the fact that it converts Real numbers into Real numbers."""
-
 # ╔═╡ 1a9bb2d0-cb5d-4626-8239-77c85dc5c586
 md"""### The algorithm
 
@@ -47,10 +41,7 @@ end
 # ╔═╡ 67f8922b-5228-4321-acc3-3678dea90ab3
 md"""
 #### Using the right format
-
-The algorithm uses the `YCbCr` decomposition. Therefore, first we must convert the image to the correct format. We also separate the three channels to operate with them properly. Moreover, due to the human eye being muvh more sensitive to the luminosity than to the intensity of a color, we can reduce the matrices `Cb` and `Cr` by creating smaller matrices in which every pixel is the average of 4 neighbouring pixels in the original matrix. Finally, we'll center all of the matrices coefficients on 0. The values will range between -128 and 128.
-
-The inverse process is also implemented, since it will be used later to retrieve the compressed image."""
+"""
 
 # ╔═╡ c3dac6d4-8740-464c-b85b-28fc489ad23e
 function format(M) # ANTES etapa1
@@ -130,7 +121,6 @@ function transform(Y,Cb,Cr)
 end
 
 # ╔═╡ d563200c-6bae-4d76-93a4-503ac83f8bc6
-# inversa
 function invtransform(Y, Cb, Cr)
     n,m = size(Y)
 	n₁,m₁ = size(Cb)
@@ -151,6 +141,290 @@ function invtransform(Y, Cb, Cr)
 		end
 	end
 	return Y, Cb, Cr
+end
+
+# ╔═╡ 35a990a0-149e-48c3-b681-6442b0b01bd3
+md"""#### Quantization
+
+Two different quantization matrices are proposed.
+ """
+
+# ╔═╡ b4bf7a59-5a8a-4dac-83e2-1ad5db4d3c41
+quant₁=[16 11 10 16 24 40 51 61; 
+   12 12 14 19 26 58 60 55; 
+   14 13 16 24 40 57 69 56;  
+   14 17 22 29 51 87 80 62;
+   18 22 37 56 68 109 103 77;
+   24 35 55 64 81 104 113 92; 
+   49 64 78 87 103 121 120 101;
+	72 92 95 98 112 100 103 99]
+
+# ╔═╡ 5718ec6a-1330-4940-8e58-dcecd2de5f3d
+quant₂ = [ 16 16 16 16 17 18 20 24;
+	16 16 16 17 18 20 24 25;
+	16 16 17 18 20 24 25 28;
+	16 17 18 20 24 25 28 33;
+	17 18 20 24 25 28 33 41;
+	18 20 24 25 28 33 41 54;
+	20 24 25 28 33 41 54 71;
+	24 25 28 33 41 54 71 91]
+
+# ╔═╡ a9c8cbcc-b0c9-4a93-86b0-9a6e44243ed7
+# cuantización
+function quantization(Y,Cb,Cr, quant)
+    n,m = size(Y)
+	n₁,m₁ = size(Cb) 
+	n₂,m₂ = size(Cr)
+	for i in 1:8:n
+		for j in 1:8:m
+		    Y[i:i+7, j:j+7] = Int.(round.(Y[i:i+7, j:j+7]./quant))
+		end
+	end
+	for i in 1:8:n₁
+		for j in 1:8:m₁
+			Cb[i:i+7, j:j+7] = Int.(round.(Cb[i:i+7, j:j+7]./quant))
+		end
+	end
+	for i in 1:8:n₂
+		for j in 1:8:m₂
+			Cr[i:i+7, j:j+7] = Int.(round.(Cr[i:i+7, j:j+7]./quant))
+		end
+	end
+	return Y, Cb, Cr
+end
+
+# ╔═╡ 4757cd8b-506d-4343-a33a-7d561aa84739
+# inv-cuantización
+function invquantization(Y,Cb,Cr, quant)
+    n,m = size(Y)
+	n₁,m₁ = size(Cb)
+	n₂,m₂ = size(Cr) 
+	for i in 1:8:n
+		for j in 1:8:m
+		    Y[i:i+7, j:j+7] = Y[i:i+7, j:j+7] .* quant
+		end
+	end
+	for i in 1:8:n₁
+		for j in 1:8:m₁
+			Cb[i:i+7, j:j+7] = Cb[i:i+7, j:j+7] .* quant
+		end
+	end
+	for i in 1:8:n₂
+		for j in 1:8:m₂
+			Cr[i:i+7, j:j+7] = Cr[i:i+7, j:j+7] .* quant 
+		end
+	end
+	return Y, Cb, Cr
+end
+
+# ╔═╡ 1dfaa984-2e91-4d1b-9e3d-d36f8bb42092
+md"""#### Compression 
+
+"""
+
+# ╔═╡ c814508a-7c34-40ca-95f5-8390dbda0fd3
+# zig-zag
+function zigzag(bloque)
+	tmp =[1, 9, 2, 3, 10, 17, 25, 18, 11, 4, 5, 12, 19, 26, 33, 41, 34, 27, 20, 13, 6, 7, 14, 21, 28, 35, 42, 49, 57, 50, 43, 36, 29, 22, 15, 8, 16, 23, 30, 37, 44, 51, 58, 59, 52, 45, 38, 31, 24, 32, 39, 46, 53, 60, 61, 54, 47, 40, 48, 55, 62, 63, 56,64]
+	res = []
+	for i in 1:64 
+		push!(res, bloque[tmp[i]]) 
+	end
+	return res
+end
+
+# ╔═╡ e637e0cc-bd52-4e66-96ab-62be56c6d029
+function join(M)
+	n, m = size(M)
+	reps = []
+	vals = [] 
+	for i in 1:8:n
+		for j in 1:8:m
+			vals_t, reps_t = rle(zigzag(M[i:i+7, j:j+7]))
+		    reps = push!(reps,reps_t...)
+			vals = push!(vals,vals_t...)
+		end
+	end
+	return [reps;vals]
+end
+
+# ╔═╡ 078f594a-bf68-4a2c-ba83-752cc8d2845c
+function compression(Y, Cb, Cr)
+	return [join(Y); join(Cb); join(Cr)] 
+end
+
+# ╔═╡ cf0c7e69-6e52-4fc9-8d5a-a514cdfc7ba4
+function envect(vect, sz, beginning)
+	subvect = Vector{Int}([])
+	tmp = 0
+	cant = 0
+	i = beginning
+	while i <= length(vect)
+		tmp = tmp + vect[i]
+		if tmp == sz
+			cant = i
+			i = length(vect)+1
+		else
+			i = i+1
+		end
+	end
+	dif = cant - beginning + 1 
+    for h in beginning:(cant+dif)
+		if h <= length(vect) 
+          push!(subvect, vect[h])
+		end
+	end
+	reps = subvect[1:Int(length(subvect)/2)]
+	vals = subvect[Int(length(subvect)/2)+1:end]
+	return reps, vals
+end
+
+# ╔═╡ 98ca8faf-4ca1-48c0-a001-871ee777ee4a
+function invzigzag(vect)
+	res = fill(0, 8, 8) 
+	tmp =[1, 9, 2, 3, 10, 17, 25, 18, 11, 4, 5, 12, 19, 26, 33, 41, 34, 27, 20, 13, 6, 7, 14, 21, 28, 35, 42, 49, 57, 50, 43, 36, 29, 22, 15, 8, 16, 23, 30, 37, 44, 51, 58, 59, 52, 45, 38, 31, 24, 32, 39, 46, 53, 60, 61, 54, 47, 40, 48, 55, 62, 63, 56, 64]
+	for i in 1:64
+		res[tmp[i]] = vect[i]
+	end 
+	return res
+end
+
+# ╔═╡ ea1ca70d-a30f-4f05-a16e-e81fb6cc2820
+function enmatrix(inv, rows, cols)
+	M = fill(0.0, Int(rows), Int(cols))
+	bloque = 0
+    for i in 1:8:Int(rows)
+		for j in 1:8:Int(cols)
+			if bloque < rows*cols/64 
+			 bloque = bloque+1
+			 tmp = inv[(bloque-1)*64+1:bloque*64]
+			 M[i:i+7, j:j+7] = invzigzag(tmp)
+			end
+		end
+	end
+	return M
+end
+
+# ╔═╡ 065e11a9-26cb-4751-8aab-f58d7caacc67
+function invcompression(v, n, m)
+	repsY, valsY = envect(v, n*m, 1)
+	repsCb, valsCb  = envect(v, (n/2)*(m/2), length(repsY)*2+1)
+	repsCr, valsCr  = envect(v, (n/2)*(m/2),length(repsY)*2+length(repsCb)*2+1)	
+	Y = enmatrix(inverse_rle(valsY, repsY),n,m)
+	Cr = enmatrix(inverse_rle(valsCr, repsCr),n/2,m/2) 
+	Cb = enmatrix(inverse_rle(valsCb, repsCb),n/2,m/2)
+	return Y,Cb,Cr
+end
+
+# ╔═╡ 49d7693d-ef43-46cb-8ff3-9c129665326b
+function saving(vect, name, n,m, quant)
+	io = open(name,"w")
+	write(io, UInt16(n))
+	write(io, UInt16(m))
+	for i in 1:8 
+		for j in 1:8
+			write(io, UInt8(quant[i, j]))
+		end
+	end
+	for num in vect 
+		write(io, Int8(num))
+	end
+	close(io)
+end
+
+# ╔═╡ c25463ca-ec0d-4cd4-a88b-516edd297248
+function reading(archive)
+	io = open(archive)
+	n = read(io,UInt16) 
+	m = read(io,UInt16)
+	quant = fill(0, 8, 8)
+	vect = []
+	for i in 1:8
+		for j in 1:8
+			quant[i, j] = read(io, UInt8)
+		end
+	end
+	while !eof(io)
+		push!(vect, read(io, Int8))
+	end
+	return n, m, quant, vect
+end
+
+# ╔═╡ 6993cb0b-aec8-4bec-8498-0066c453f9bc
+md"""#### Joining all the steps"""
+
+# ╔═╡ 3b1325bc-1c80-42e3-84ce-c39bd1925509
+function codification(name, ext, quant)
+	im = load(name)
+	imprep = preparation(im)
+	Y, Cb, Cr = format(imprep)
+	n,m = size(Y)
+	Yt, Cbt, Crt = transform(Y, Cb, Cr)
+	Ycuant, Cbcuant, Crcuant = quantization(Yt, Cbt, Crt, quant)
+	vect = compression(Ycuant, Cbcuant, Crcuant)
+	if ext == ".bmp"
+		saving(vect, replace(name, ".bmp" => ".cym"),n,m, quant)
+	elseif ext == ".jpg"
+		saving(vect, replace(name, ".jpg" => ".cym"),n,m, quant)
+	end
+end
+
+# ╔═╡ 8a980ffa-3560-41cf-8180-f0e93345371c
+function invcodification(name)
+	n, m, quant, vect = reading(name)
+	Y, Cb, Cr = invcompression(vect,Int(n),Int(m)) 
+	Ysinc, Cbsinc, Crsinc = invquantization(Y, Cb, Cr, quant)
+	Ysint, Cbsint, Crsint = invtransform(Ysinc, Cbsinc, Crsinc)
+	im = invformat(Ysint, Cbsint, Crsint)
+	return im
+end
+
+# ╔═╡ 37a5f519-a0fb-495e-bb25-1e569f50cef5
+begin
+	codification("images/bolitas.bmp", ".bmp", quant₁) 
+	invcodification("images/bolitas.cym")
+end
+
+# ╔═╡ 41a57b5e-e46e-4a2b-9cbe-0753cf70eced
+begin
+	codification("images/bolitas.bmp", ".bmp", quant₂) 
+	invcodification("images/bolitas.cym")
+end
+
+# ╔═╡ 199f43ee-d779-4025-b423-6607a567274b
+begin
+	codification("images/paisaje.bmp", ".bmp", quant₁) 
+	invcodification("images/paisaje.cym")
+end
+
+# ╔═╡ 74345a66-91bc-40f0-8431-edb1e1a0ebdb
+begin
+	codification("images/paisaje.bmp", ".bmp", quant₂) 
+	invcodification("images/paisaje.cym")
+end
+
+# ╔═╡ 685e9b6d-80b1-4342-aa24-763c73dbb6a7
+begin
+	codification("images/vaquita.bmp", ".bmp", quant₁) 
+	invcodification("images/vaquita.cym")
+end
+
+# ╔═╡ 40820d44-1f93-4003-a8c4-164ecc8e8c35
+begin
+	codification("images/vaquita.bmp", ".bmp", quant₂) 
+	invcodification("images/vaquita.cym")
+end
+
+# ╔═╡ 565735bd-d975-4754-b87f-a73d22e1ff9d
+begin
+	codification("images/cascada.bmp", ".bmp", quant₁) 
+	invcodification("images/cascada.cym")
+end
+
+# ╔═╡ fa40f8ba-1ca1-4eb5-a928-cf9c1a7e87d7
+begin
+	codification("images/cascada.bmp", ".bmp", quant₂) 
+	invcodification("images/cascada.cym")
 end
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
@@ -981,14 +1255,39 @@ uuid = "3f19e933-33d8-53b3-aaab-bd5110c3b7a0"
 # ╔═╡ Cell order:
 # ╠═bb4a5540-862b-11ed-0f03-2beccc0f8315
 # ╟─2a6af5ac-9c69-4e5a-9a4a-04b28cf05c73
-# ╟─d3e6033c-a374-4892-8216-bf9eab53d0d8
 # ╟─1a9bb2d0-cb5d-4626-8239-77c85dc5c586
 # ╠═b3e6e560-5f76-471c-8946-8ad2205fbf77
 # ╟─67f8922b-5228-4321-acc3-3678dea90ab3
 # ╠═c3dac6d4-8740-464c-b85b-28fc489ad23e
 # ╠═15863cf0-ed1d-4c9b-82fe-592d3d536063
-# ╠═3fc8c15f-d8b9-4d69-91a3-9c774fb439b2
+# ╟─3fc8c15f-d8b9-4d69-91a3-9c774fb439b2
 # ╠═9166bf5f-690a-459c-8f43-ac6c2cce8b69
 # ╠═d563200c-6bae-4d76-93a4-503ac83f8bc6
+# ╠═35a990a0-149e-48c3-b681-6442b0b01bd3
+# ╟─b4bf7a59-5a8a-4dac-83e2-1ad5db4d3c41
+# ╟─5718ec6a-1330-4940-8e58-dcecd2de5f3d
+# ╠═a9c8cbcc-b0c9-4a93-86b0-9a6e44243ed7
+# ╠═4757cd8b-506d-4343-a33a-7d561aa84739
+# ╠═1dfaa984-2e91-4d1b-9e3d-d36f8bb42092
+# ╠═c814508a-7c34-40ca-95f5-8390dbda0fd3
+# ╠═e637e0cc-bd52-4e66-96ab-62be56c6d029
+# ╠═078f594a-bf68-4a2c-ba83-752cc8d2845c
+# ╠═cf0c7e69-6e52-4fc9-8d5a-a514cdfc7ba4
+# ╠═ea1ca70d-a30f-4f05-a16e-e81fb6cc2820
+# ╠═065e11a9-26cb-4751-8aab-f58d7caacc67
+# ╠═98ca8faf-4ca1-48c0-a001-871ee777ee4a
+# ╠═49d7693d-ef43-46cb-8ff3-9c129665326b
+# ╠═c25463ca-ec0d-4cd4-a88b-516edd297248
+# ╟─6993cb0b-aec8-4bec-8498-0066c453f9bc
+# ╠═3b1325bc-1c80-42e3-84ce-c39bd1925509
+# ╠═8a980ffa-3560-41cf-8180-f0e93345371c
+# ╠═37a5f519-a0fb-495e-bb25-1e569f50cef5
+# ╠═41a57b5e-e46e-4a2b-9cbe-0753cf70eced
+# ╠═199f43ee-d779-4025-b423-6607a567274b
+# ╠═74345a66-91bc-40f0-8431-edb1e1a0ebdb
+# ╠═685e9b6d-80b1-4342-aa24-763c73dbb6a7
+# ╠═40820d44-1f93-4003-a8c4-164ecc8e8c35
+# ╠═565735bd-d975-4754-b87f-a73d22e1ff9d
+# ╠═fa40f8ba-1ca1-4eb5-a928-cf9c1a7e87d7
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
